@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # The C++ engine is built from source; the parity test below is what
+      # licenses using it in place of the NumPy path.
+      - name: Build the C++ engine
+        run: make engine
+
+      - name: Lint
+        run: ruff check src tests bench scripts
+
+      - name: Test (includes C++/NumPy parity to 1e-9)
+        run: python -m pytest tests/ -q --cov=curvelab --cov-report=term
+
+      # A performance regression should fail the build, not be discovered later.
+      - name: Latency benchmark
+        run: |
+          make bench/bench_engine
+          ./bench/bench_engine 11 48 500000 | tee bench.txt
+          python - <<'PY'
+          import re, sys
+          text = open("bench.txt").read()
+          p99 = float(re.search(r"p99\s+([\d.]+) ns", text).group(1))
+          print(f"p99 per-update latency: {p99} ns")
+          if p99 > 1000:
+              sys.exit(f"latency regression: p99 {p99} ns exceeds the 1000 ns budget")
+          PY

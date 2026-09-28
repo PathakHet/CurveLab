@@ -1,0 +1,25 @@
+# Example config for running on your own data instead of the synthetic sample:
+#
+#   curvelab run --config configs/my_desk.yaml
+#
+# Keep the real config and data outside the repo (or in a git-ignored folder).
+# Anything left out here falls back to the defaults in src/curvelab/config.py.
+data:
+  market_dir: "/path/to/tt_exports"        # folder of "BRN <Mon><YY>_60min.csv" files
+  journals:
+    - "/path/to/Trade Journal.xlsx"
+  min_bars: 700
+  max_ffill_bars: 1
+
+desk:
+  anonymize: true                          # replace trader names with T01, T02, ...
+  mapping_path: "~/.curvelab/trader_mapping.json"   # name -> code lookup, kept outside the repo
+  fdr_q: 0.10
+  min_days: 8
+  bootstrap_draws: 3000
+
+research:
+  horizon: 6
+  max_active: 10
+  hysteresis: 0.25
+  periods_per_year: 6000.0
